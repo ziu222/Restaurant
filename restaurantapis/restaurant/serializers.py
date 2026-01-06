@@ -1,6 +1,9 @@
+from datetime import timedelta
+
+from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
-from restaurant.models import Category, Dish, User, Tag, Review, Like
+from restaurant.models import Category, Dish, User, Tag, Review, Like, OrderDetail, Order
 from rest_framework import serializers
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -96,3 +99,107 @@ class LikeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Like
         fields = ['id', 'user', 'dish']
+
+class OrderDetailSerializer(serializers.ModelSerializer):
+    dish_name = serializers.CharField(source='dish.name', read_only=True)
+    dish_image = serializers.ImageField(source='dish.image', read_only=True)
+
+    class Meta:
+        model = OrderDetail
+        fields = ['id', 'dish', 'dish_name', 'dish_image', 'quantity', 'unit_price']
+        extra_kwargs = {
+            'unit_price': {'read_only': True}
+        }
+
+
+class OrderSerializer(serializers.ModelSerializer):
+
+    items = OrderDetailSerializer(many=True, write_only=True, source='details',
+                                  required=False)
+    details = OrderDetailSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ['id', 'user', 'table', 'checkin_time', 'num_guests', 'payment_method', 'status', 'total_amount',
+                  'created_date', 'items', 'details']
+        read_only_fields = ['total_amount', 'status', 'created_date', 'user']
+
+    def validate(self, attrs):
+        table = attrs.get('table')
+        checkin_time = attrs.get('checkin_time')
+
+        if self.instance:
+            table = table or self.instance.table
+            checkin_time = checkin_time or self.instance.checkin_time
+
+        if table and checkin_time:
+            start_time = checkin_time - timedelta(hours=2)
+            end_time = checkin_time + timedelta(hours=2)
+            duplicate_orders = Order.objects.filter(
+                table=table,
+                status__in=['PENDING', 'CONFIRMED', 'SEATED'],
+                checkin_time__range=(start_time, end_time)
+            )
+
+            if self.instance:
+                duplicate_orders = duplicate_orders.exclude(pk=self.instance.pk)
+
+            if duplicate_orders.exists():
+                raise serializers.ValidationError(
+                    {"table": f"Bàn {table.name} đã có người đặt vào khung giờ này (hoặc lân cận 2h)."}
+                )
+
+        return attrs
+
+    def create(self, validated_data):
+        items_data = validated_data.pop('details')
+        user = self.context['request'].user
+
+        with transaction.atomic():
+            order = Order.objects.create(user=user, **validated_data)
+            total = 0
+
+            for item in items_data:
+                dish = item['dish']
+                quantity = item['quantity']
+                price = dish.price
+                total += price * quantity
+
+                OrderDetail.objects.create(
+                    order=order,
+                    dish=dish,
+                    quantity=quantity,
+                    unit_price=price
+                )
+
+            order.total_amount = total
+            order.save()
+
+        return order
+
+    def update(self, instance, validated_data):
+        items_data = validated_data.pop('details', None)
+
+        with transaction.atomic():
+            instance = super().update(instance, validated_data)
+
+            if items_data is not None:
+                instance.details.all().delete()
+                total = 0
+                for item in items_data:
+                    dish = item['dish']
+                    quantity = item['quantity']
+                    price = dish.price
+                    total += price * quantity
+
+                    OrderDetail.objects.create(
+                        order=instance,
+                        dish=dish,
+                        quantity=quantity,
+                        unit_price=price
+                    )
+
+                instance.total_amount = total
+                instance.save()
+
+        return instance
