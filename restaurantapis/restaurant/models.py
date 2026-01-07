@@ -13,6 +13,21 @@ class User(AbstractUser):
     avatar = CloudinaryField(null=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.CUSTOMER)
 
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='restaurant_user_set',
+        blank=True,
+        help_text='The groups this user belongs to.',
+        verbose_name='groups',
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='restaurant_user_set',
+        blank=True,
+        help_text='Specific permissions for this user.',
+        verbose_name='user permissions',
+    )
+
 class Category(models.Model):
     name = models.CharField(max_length=50, unique=True)
 
@@ -33,6 +48,8 @@ class Dish(BaseModel):
     price = models.DecimalField(max_digits=10, decimal_places=0)
     ingredients = models.TextField()
     image = models.ImageField(upload_to='restaurant/%Y/%m', null=True)
+    # Estimated preparation time in minutes
+    prepare_time = models.IntegerField(default=15)
 
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     chef = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'CHEF'})
