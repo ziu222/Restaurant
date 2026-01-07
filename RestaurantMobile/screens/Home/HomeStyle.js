@@ -3,7 +3,7 @@ import { StyleSheet } from 'react-native';
 const homeStyles = StyleSheet.create({
   wrapper: {
     flex: 1,
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFFFFF',
   },
   container: {
     flex: 1,
@@ -15,7 +15,7 @@ const homeStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#FFFFFF',
   },
 
   // ===== HERO SECTION =====
@@ -24,192 +24,167 @@ const homeStyles = StyleSheet.create({
     height: 450,
     position: 'relative',
     overflow: 'hidden',
+    marginBottom: 40,
   },
   heroImage: {
     width: '100%',
     height: '100%',
+    position: 'absolute',
   },
   heroOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+  },
+  heroContent: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    zIndex: 1,
+    paddingHorizontal: 40,
   },
   heroTitle: {
     fontSize: 48,
     fontWeight: '900',
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 16,
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 2, height: 2 },
-    textShadowRadius: 4,
+    marginBottom: 12,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
   heroSubtitle: {
-    fontSize: 20,
-    color: '#F0F0F0',
+    fontSize: 18,
+    color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 28,
-    fontWeight: '500',
-    textShadowColor: 'rgba(0, 0, 0, 0.6)',
-    textShadowOffset: { width: 1, height: 1 },
-    textShadowRadius: 2,
+    marginBottom: 24,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
   },
-  heroButton: {
+  heroCTA: {
+    paddingVertical: 14,
+    paddingHorizontal: 40,
     backgroundColor: '#FF6B35',
-    paddingVertical: 16,
-    paddingHorizontal: 48,
     borderRadius: 4,
+    elevation: 3,
+  },
+  heroCTAHovered: {
     elevation: 8,
     shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
   },
   heroButtonText: {
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '700',
-    textAlign: 'center',
     letterSpacing: 0.5,
   },
 
-  // ===== UP NEXT SECTION (Featured Dishes) =====
-  upNextSection: {
-    paddingVertical: 60,
+  // ===== FEATURED DISHES SECTION =====
+  sectionContainer: {
     paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  sectionHeader: {
     marginBottom: 40,
   },
-  upNextLabel: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FF6B35',
-    letterSpacing: 2,
-    marginBottom: 8,
-  },
   sectionTitle: {
-    fontSize: 36,
+    fontSize: 32,
     fontWeight: '900',
-    color: '#1A1A1A',
-    letterSpacing: -0.5,
+    color: '#000000',
+    marginBottom: 24,
   },
   dishesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: 16,
   },
-  dishCardModern: {
-    width: '32%',
-    aspectRatio: 1,
+  dishCard: {
+    width: '31%',
+    marginBottom: 20,
     borderRadius: 8,
     overflow: 'hidden',
+    elevation: 2,
     backgroundColor: '#FFFFFF',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    marginBottom: 8,
   },
-  dishImageModern: {
+  dishImage: {
     width: '100%',
-    height: '65%',
-    backgroundColor: '#F0F0F0',
+    height: 150,
   },
-  dishDetailsModern: {
-    flex: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    justifyContent: 'space-between',
+  dishInfo: {
+    padding: 12,
   },
-  dishNameModern: {
+  dishName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1A1A',
+    color: '#000000',
     marginBottom: 4,
   },
-  dishPriceModern: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#FF6B35',
+  dishCategory: {
+    fontSize: 12,
+    color: '#888888',
   },
 
-  // ===== ABOUT US SECTIONS =====
-  aboutUsSection: {
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-    marginTop: 20,
-  },
-  aboutLayout: {
+  // ===== ABOUT SECTION 1 =====
+  aboutSection1: {
     flexDirection: 'row',
-    gap: 40,
+    paddingHorizontal: 20,
+    marginBottom: 40,
     alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 30,
   },
-  aboutTextContainer: {
+  aboutContent1: {
     flex: 1,
-    gap: 16,
   },
-  aboutUsTitle: {
-    fontSize: 36,
+  aboutImage1: {
+    flex: 1,
+    height: 300,
+    borderRadius: 8,
+  },
+  aboutTitle: {
+    fontSize: 28,
     fontWeight: '900',
-    color: '#1A1A1A',
-    letterSpacing: -0.5,
+    color: '#000000',
+    marginBottom: 16,
   },
-  aboutUsText: {
-    fontSize: 16,
-    color: '#5A5A5A',
-    lineHeight: 28,
-    fontWeight: '500',
+  aboutText: {
+    fontSize: 14,
+    color: '#555555',
+    lineHeight: 24,
+    marginBottom: 20,
   },
-  aboutUsImage: {
-    flex: 1,
-    height: 350,
-    borderRadius: 12,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-  },
-  aboutUsButton: {
-    backgroundColor: '#FF6B35',
-    paddingVertical: 14,
-    paddingHorizontal: 36,
+  aboutButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 28,
+    backgroundColor: '#F5F5F5',
     borderRadius: 4,
     alignSelf: 'flex-start',
-    elevation: 4,
-    shadowColor: '#FF6B35',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
   },
-  aboutUsButtonHover: {
-    backgroundColor: '#E55A2B',
-    elevation: 8,
-    shadowColor: '#E55A2B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 6,
+  aboutButtonHovered: {
+    backgroundColor: '#FF6B35',
   },
-  aboutUsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 15,
+  aboutButtonText: {
+    color: '#000000',
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
 
-  // ===== DELETE OLD PREMIUM AND SPECIAL OFFERS STYLES (Keeping for reference, not used) =====
+  // ===== ABOUT SECTION 2 (Reversed Layout) =====
+  aboutSection2: {
+    flexDirection: 'row-reverse',
+    paddingHorizontal: 20,
+    marginBottom: 40,
+    alignItems: 'center',
+    gap: 30,
+  },
+  aboutContent2: {
+    flex: 1,
+  },
+  aboutImage2: {
+    flex: 1,
+    height: 300,
+    borderRadius: 8,
+  },
 });
 
 export default homeStyles;

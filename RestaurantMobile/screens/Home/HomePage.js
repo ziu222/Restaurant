@@ -12,6 +12,25 @@ import { useNavigation } from '@react-navigation/native';
 import { fetchDishes } from '../../store/dishesSlice';
 import homeStyles from './HomeStyle';
 
+// Fallback images from assets
+const FALLBACK_IMAGES = [
+  require('../../assets/home/home-1.avif'),
+  require('../../assets/home/home-2.avif'),
+  require('../../assets/home/home-3.avif'),
+  require('../../assets/home/hamburger.avif'),
+  require('../../assets/home/pizzaavif.avif'),
+  require('../../assets/home/spaghetti.avif'),
+];
+
+const getDishImage = (dish, index) => {
+  // If dish has an image URL, use it
+  if (dish.image) {
+    return { uri: dish.image };
+  }
+  // Otherwise cycle through fallback images
+  return FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+};
+
 const HomePage = () => {
   const dispatch = useDispatch();
   const navigation = useNavigation();
@@ -48,94 +67,98 @@ const HomePage = () => {
             style={homeStyles.heroImage}
             resizeMode="cover"
           />
-          <View style={homeStyles.heroOverlay}>
-            <Text style={homeStyles.heroTitle}>Welcome to Our Restaurant</Text>
-            <Text style={homeStyles.heroSubtitle}>
-              Experience culinary excellence with every bite
-            </Text>
-            <TouchableOpacity style={homeStyles.heroButton}>
+          <View style={homeStyles.heroOverlay} />
+          <View style={homeStyles.heroContent}>
+            <Text style={homeStyles.heroTitle}>Discover Amazing Dishes</Text>
+            <Text style={homeStyles.heroSubtitle}>Taste the best culinary experience</Text>
+            <TouchableOpacity
+              style={[
+                homeStyles.heroCTA,
+                hoveredButton === 'explore' && homeStyles.heroCTAHovered,
+              ]}
+              onPress={() => navigation.navigate('Login')}
+              onMouseEnter={() => setHoveredButton('explore')}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
               <Text style={homeStyles.heroButtonText}>Explore Menu</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* ===== SECTION 2: FEATURED DISHES (UP NEXT) ===== */}
-        <View style={homeStyles.upNextSection}>
-          <View style={homeStyles.sectionHeader}>
-            <Text style={homeStyles.upNextLabel}>UP NEXT</Text>
-            <Text style={homeStyles.sectionTitle}>Featured Dishes</Text>
-          </View>
-          
+        {/* ===== SECTION 2: FEATURED DISHES GRID ===== */}
+        <View style={homeStyles.sectionContainer}>
+          <Text style={homeStyles.sectionTitle}>Featured Dishes</Text>
           <View style={homeStyles.dishesGrid}>
-            {dishes.slice(0, 9).map((dish, idx) => (
-              <TouchableOpacity key={dish.id} style={homeStyles.dishCardModern}>
+            {dishes.slice(0, 9).map((dish, index) => (
+              <TouchableOpacity 
+                key={index} 
+                style={homeStyles.dishCard}
+              >
                 <Image
-                  source={{ uri: `http://127.0.0.1:8000${dish.image}` }}
-                  style={homeStyles.dishImageModern}
+                  source={getDishImage(dish, index)}
+                  style={homeStyles.dishImage}
                   resizeMode="cover"
                 />
-                <View style={homeStyles.dishDetailsModern}>
-                  <Text style={homeStyles.dishNameModern}>{dish.name}</Text>
-                  <Text style={homeStyles.dishPriceModern}>${dish.price.toFixed(2)}</Text>
+                <View style={homeStyles.dishInfo}>
+                  <Text style={homeStyles.dishName}>{dish.name}</Text>
+                  <Text style={homeStyles.dishCategory}>{dish.category}</Text>
                 </View>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* ===== SECTION 3: ABOUT US - LAYOUT 1 (TEXT LEFT, IMAGE RIGHT) ===== */}
-        <View style={homeStyles.aboutUsSection}>
-          <View style={homeStyles.aboutLayout}>
-            <View style={homeStyles.aboutTextContainer}>
-              <Text style={homeStyles.aboutUsTitle}>Our Story & Passion</Text>
-              <Text style={homeStyles.aboutUsText}>
-                For over a decade, we've been dedicated to crafting exceptional dining experiences. Our chefs source the finest, locally-sourced ingredients to create dishes that celebrate flavor and innovation. Every plate that leaves our kitchen tells a story of tradition, creativity, and passion for culinary excellence.
-              </Text>
-              <TouchableOpacity 
-                style={[
-                  homeStyles.aboutUsButton,
-                  hoveredButton === 'about1' && homeStyles.aboutUsButtonHover
-                ]}
-                onPress={handleAboutUs}
-                onMouseEnter={() => setHoveredButton('about1')}
-                onMouseLeave={() => setHoveredButton(null)}
-              >
-                <Text style={homeStyles.aboutUsButtonText}>About Us</Text>
-              </TouchableOpacity>
-            </View>
-            <Image
-              source={require('../../assets/home/home-2.avif')}
-              style={homeStyles.aboutUsImage}
-              resizeMode="cover"
-            />
+        {/* ===== SECTION 3: ABOUT US (Layout 1) ===== */}
+        <View style={homeStyles.aboutSection1}>
+          <View style={homeStyles.aboutContent1}>
+            <Text style={homeStyles.aboutTitle}>About Our Restaurant</Text>
+            <Text style={homeStyles.aboutText}>
+              We are committed to serving the finest dishes with premium quality ingredients. 
+              Our chefs bring years of experience and passion to every plate.
+            </Text>
+            <TouchableOpacity
+              style={[
+                homeStyles.aboutButton,
+                hoveredButton === 'about1' && homeStyles.aboutButtonHovered,
+              ]}
+              onPress={handleAboutUs}
+              onMouseEnter={() => setHoveredButton('about1')}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              <Text style={homeStyles.aboutButtonText}>Learn More</Text>
+            </TouchableOpacity>
           </View>
+          <Image
+            source={require('../../assets/home/home-2.avif')}
+            style={homeStyles.aboutImage1}
+            resizeMode="cover"
+          />
         </View>
 
-        {/* ===== SECTION 4: ABOUT US - LAYOUT 2 (IMAGE LEFT, TEXT RIGHT - REVERSED) ===== */}
-        <View style={homeStyles.aboutUsSection}>
-          <View style={[homeStyles.aboutLayout, { flexDirection: 'row-reverse' }]}>
-            <View style={homeStyles.aboutTextContainer}>
-              <Text style={homeStyles.aboutUsTitle}>Culinary Excellence</Text>
-              <Text style={homeStyles.aboutUsText}>
-                Our commitment to excellence goes beyond recipes. We believe in sustainable practices, supporting local farmers, and creating a community around great food. Every ingredient is carefully selected, every technique perfected, and every guest treated like family in our restaurant.
-              </Text>
-              <TouchableOpacity 
-                style={[
-                  homeStyles.aboutUsButton,
-                  hoveredButton === 'about2' && homeStyles.aboutUsButtonHover
-                ]}
-                onPress={handleAboutUs}
-                onMouseEnter={() => setHoveredButton('about2')}
-                onMouseLeave={() => setHoveredButton(null)}
-              >
-                <Text style={homeStyles.aboutUsButtonText}>About Us</Text>
-              </TouchableOpacity>
-            </View>
-            <Image
-              source={require('../../assets/home/home-3.avif')}
-              style={homeStyles.aboutUsImage}
-              resizeMode="cover"
-            />
+        {/* ===== SECTION 4: ABOUT US (Layout 2 - Reversed) ===== */}
+        <View style={homeStyles.aboutSection2}>
+          <Image
+            source={require('../../assets/home/home-3.avif')}
+            style={homeStyles.aboutImage2}
+            resizeMode="cover"
+          />
+          <View style={homeStyles.aboutContent2}>
+            <Text style={homeStyles.aboutTitle}>Our Vision</Text>
+            <Text style={homeStyles.aboutText}>
+              Creating memorable dining experiences through innovative cuisine and exceptional service. 
+              Every dish tells a story of tradition and creativity.
+            </Text>
+            <TouchableOpacity
+              style={[
+                homeStyles.aboutButton,
+                hoveredButton === 'about2' && homeStyles.aboutButtonHovered,
+              ]}
+              onPress={handleAboutUs}
+              onMouseEnter={() => setHoveredButton('about2')}
+              onMouseLeave={() => setHoveredButton(null)}
+            >
+              <Text style={homeStyles.aboutButtonText}>Explore More</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>

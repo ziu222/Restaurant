@@ -36,7 +36,6 @@ const About = () => {
   return (
     <View style={aboutStyles.wrapper}>
       <ScrollView style={aboutStyles.container} showsVerticalScrollIndicator={false}>
-        {/* Back Button */}
         <TouchableOpacity
           style={[
             aboutStyles.backButton,
@@ -48,18 +47,14 @@ const About = () => {
         >
           <Text style={aboutStyles.backText}>← Back</Text>
         </TouchableOpacity>
-
-        {/* Header */}
         <View style={aboutStyles.header}>
-          <Text style={aboutStyles.title}>About Our Team</Text>
+          <Text style={aboutStyles.title}>Students' information</Text>
           <Text style={aboutStyles.subtitle}>
-            We are passionate developers building amazing restaurant experiences
-          </Text>
+                      </Text>
         </View>
 
-        {/* Students Section */}
         <View style={aboutStyles.studentsSection}>
-          <Text style={aboutStyles.sectionTitle}>Meet Our Team</Text>
+          <Text style={aboutStyles.sectionTitle}></Text>
           <View style={aboutStyles.studentsGrid}>
             {aboutData.students.map((student, index) => (
               <TouchableOpacity
