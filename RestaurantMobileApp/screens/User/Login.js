@@ -4,8 +4,6 @@ import { TextInput, Button } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// --- KIỂM TRA ĐƯỜNG DẪN IMPORT ---
-// Nếu file này nằm ở screens/User/Login.js thì phải lùi ra 2 cấp (../../)
 import MyStyles from "../../styles/MyStyles";
 import Apis, { endpoints, authApi } from "../../utils/Apis";
 import { MyUserContext } from "../../utils/MyContexts"; 
@@ -20,20 +18,16 @@ const Login = () => {
     const navigation = useNavigation();
 
     const login = async () => {
-        // 1. Validate dữ liệu
         if (!username || !password) {
             Alert.alert("Thông báo", "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu!");
             return;
         }
 
         setLoading(true);
-        Keyboard.dismiss(); // Ẩn bàn phím khi bấm đăng nhập
+        Keyboard.dismiss(); 
 
         try {
-            // 2. CHUẨN BỊ DỮ LIỆU GỬI ĐI (Cực kỳ quan trọng)
-            // Django OAuth bắt buộc định dạng form-urlencoded.
-            // Ta ghép chuỗi thủ công để đảm bảo không bị lỗi trên Android/iOS.
-            
+
             const CLIENT_ID = "fiv9KML4DDALzE24uLSRgE7wkWKxGH7ebOLYfVVz"; 
             const CLIENT_SECRET = "pbkdf2_sha256$1200000$UwCsVTQccGURCq3QEp5ql0$FwkN29FBHeQoQHhtdTLQyNv1TTdJWWqt9jcDLcMHuj4=";
 

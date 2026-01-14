@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.db import transaction
 from rest_framework.exceptions import ValidationError
 
-from restaurant.models import Category, Dish, User, Tag, Review, Like, OrderDetail, Order
+from restaurant.models import Category, Dish, User, Tag, Review, Like, OrderDetail, Order, Table
 from rest_framework import serializers
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -13,6 +13,11 @@ class ItemSerializer(serializers.ModelSerializer):
             data['image'] = instance.image.url
         return data
 
+
+class TableSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Table
+        fields = ['id', 'name', 'capacity', 'active']
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -39,7 +44,7 @@ class DishDetailSerializer(DishSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id','first_name', 'last_name', 'username', 'password', 'avatar', 'role']
+        fields = ['id', 'first_name', 'last_name', 'username', 'password', 'avatar', 'role']
         extra_kwargs = {
             'password': {'write_only': True},
             'role': {'required': False}
@@ -178,20 +183,26 @@ class OrderSerializer(serializers.ModelSerializer):
         return order
 
     def update(self, instance, validated_data):
+        # Lấy danh sách món mới gọi thêm (nếu có)
         items_data = validated_data.pop('details', None)
 
         with transaction.atomic():
+            # 1. Cập nhật các thông tin cơ bản khác (bàn, số khách...) nếu có gửi kèm
             instance = super().update(instance, validated_data)
 
             if items_data is not None:
-                instance.details.all().delete()
-                total = 0
+                # 2. Lấy tổng tiền hiện có của đơn hàng để cộng dồn tiếp
+                total = instance.total_amount or 0
+
                 for item in items_data:
                     dish = item['dish']
                     quantity = item['quantity']
                     price = dish.price
+
+                    # Tính tiền cho phần món gọi thêm
                     total += price * quantity
 
+                    # 3. Tạo chi tiết món mới (OrderDetail) mà KHÔNG xóa cái cũ
                     OrderDetail.objects.create(
                         order=instance,
                         dish=dish,
@@ -199,6 +210,7 @@ class OrderSerializer(serializers.ModelSerializer):
                         unit_price=price
                     )
 
+                # 4. Lưu tổng tiền mới sau khi đã cộng dồn các món gọi thêm
                 instance.total_amount = total
                 instance.save()
 

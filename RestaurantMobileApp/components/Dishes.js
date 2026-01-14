@@ -1,125 +1,147 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, Image, ScrollView, TouchableOpacity, ActivityIndicator, RefreshControl, StyleSheet } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import moment from "moment";
-import 'moment/locale/vi';
-import Apis, { endpoints } from "../utils/Apis";
-import MyStyles from "../styles/MyStyles";
+import React, { useState, useEffect, useContext } from 'react';
+import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import { Card, IconButton, Chip } from 'react-native-paper'; 
+import Apis, { endpoints } from '../utils/Apis';
+import { MyUserContext, MyCartContext } from '../utils/MyContexts';
 
-const Dishes = ({ cateId, keyword, ordering }) => {
+const Dishes = ({ cateId, keyword, ordering, toggleCompare, compareItems = [] }) => {
     const [dishes, setDishes] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [page, setPage] = useState(1);
+    
+    const [user] = useContext(MyUserContext);
+    const [, dispatch] = useContext(MyCartContext);
     const navigation = useNavigation();
 
-    // --- EFFECT 1: RESET DỮ LIỆU ---
-    // Chỉ chạy khi thay đổi bộ lọc (Danh mục, Tìm kiếm, Sắp xếp).
-    // KHÔNG ĐƯỢC để 'page' vào đây, nếu không sẽ bị loop hoặc không load được trang 2.
-    useEffect(() => {
-        setPage(1);
-        setDishes([]); 
-    }, [cateId, keyword, ordering]);
-
-    // --- EFFECT 2: TẢI DỮ LIỆU ---
-    // Chạy khi 'page' thay đổi HOẶC các bộ lọc thay đổi.
     useEffect(() => {
         const loadDishes = async () => {
-            if (page > 0) {
-                setLoading(true);
-                try {
-                    // 1. Tạo URL
-                    let url = `${endpoints['dishes']}?page=${page}`;
-                    
-                    if (keyword) url += `&q=${keyword}`;
-                    if (cateId) url += `&category_id=${cateId}`;
-                    // QUAN TRỌNG: Phải cộng tham số ordering vào đây
-                    if (ordering) url += `&ordering=${ordering}`;
+            setLoading(true);
+            try {
+                let e = endpoints['dishes'];
+                let queryParts = [];
+                if (cateId) queryParts.push(`category_id=${cateId}`);
+                if (keyword) queryParts.push(`q=${keyword}`);
+                if (ordering) queryParts.push(`ordering=${ordering}`);
+                
+                if (queryParts.length > 0) e = `${e}?${queryParts.join("&")}`;
 
-                    console.info("Fetching URL:", url);
-
-                    // 2. Gọi API
-                    let res = await Apis.get(url);
-
-                    // 3. Cập nhật State
-                    if (page === 1) {
-                        setDishes(res.data.results);
-                    } else {
-                        setDishes(current => [...current, ...res.data.results]);
-                    }
-
-                    // Nếu hết trang thì setPage(0) để ngừng loadMore
-                    if (res.data.next === null) setPage(0);
-
-                } catch (ex) {
-                    // Xử lý lỗi 404 khi hết trang
-                    if (ex.response && ex.response.status === 404) {
-                        setPage(0);
-                    } else {
-                        console.error("Lỗi tải món:", ex);
-                    }
-                } finally {
-                    setLoading(false);
-                }
+                let res = await Apis.get(e);
+                setDishes(res.data.results);
+            } catch (ex) {
+                console.error(ex);
+            } finally {
+                setLoading(false);
             }
         }
         loadDishes();
-    }, [cateId, keyword, ordering, page]); // <--- Phải có đủ 4 biến này trong dependency
+    }, [cateId, keyword, ordering]);
 
-    const isCloseToBottom = ({ layoutMeasurement, contentOffset, contentSize }) => {
-        return layoutMeasurement.height + contentOffset.y >= contentSize.height - 20;
-    };
-
-    const loadMore = ({ nativeEvent }) => {
-        if (!loading && page > 0 && isCloseToBottom(nativeEvent)) {
-            setPage(page + 1);
+    const quickAddToCart = (dish) => {
+        if (!user) {
+            Alert.alert("Thông báo", "Vui lòng đăng nhập để đặt món!");
+            return;
         }
-    };
+        dispatch({ type: "add", payload: dish });
+        Alert.alert("Đã thêm", `Đã thêm ${dish.name} vào giỏ!`);
+    }
+
+    if (loading) return <ActivityIndicator size="large" color="orange" style={{marginTop: 20}} />;
 
     return (
-        <ScrollView 
-            onScroll={loadMore}
-            scrollEventThrottle={16}
-            refreshControl={
-                <RefreshControl refreshing={loading && page === 1} onRefresh={() => setPage(1)} />
-            }
-            contentContainerStyle={{ flexGrow: 1 }}
-        >
-            <View style={{ paddingBottom: 20 }}>
-                {dishes.length === 0 && !loading && (
-                    <Text style={{ textAlign: 'center', marginTop: 20, fontSize: 16 }}>Không tìm thấy món ăn nào.</Text>
-                )}
-
-                {dishes.map(d => (
+        <ScrollView contentContainerStyle={{ paddingBottom: 80 }}>
+            {dishes.length === 0 && <Text style={{textAlign: 'center', marginTop: 20}}>Không có món ăn nào.</Text>}
+            
+            {dishes.map(d => {
+                const isComparing = compareItems.some(i => i.id === d.id);
+                
+                return (
                     <TouchableOpacity key={d.id} onPress={() => navigation.navigate("DishDetail", { dishId: d.id })}>
-                        <View style={styles.dishContainer}>
-                            {d.image && (
-                                <Image source={{ uri: d.image }} style={styles.dishImage} />
-                            )}
-                            <View style={styles.dishInfo}>
-                                <Text style={MyStyles.subject} numberOfLines={2}>{d.name}</Text>
-                                <Text style={styles.dateText}>
-                                    {moment(d.created_date).fromNow()}
-                                </Text>
-                                <Text style={styles.priceText}>
-                                    {d.price.toLocaleString("vi-VN")} VNĐ
+                        <Card style={styles.card}>
+                            <Card.Cover source={{ uri: d.image }} />
+                            
+                            {/* Sửa lỗi hiển thị thời gian nấu (Thêm fallback nếu null) */}
+                            <View style={styles.prepBadge}>
+                                <IconButton icon="clock-outline" size={16} iconColor="white" style={{margin:0}} />
+                                <Text style={styles.prepText}>
+                                    {d.preparation ? d.preparation : "15"} phút
                                 </Text>
                             </View>
-                        </View>
+
+                            <Card.Content style={{paddingTop: 10}}>
+                                <View style={styles.rowBetween}>
+                                    <View style={{flex: 1}}>
+                                        <Text style={styles.dishName}>{d.name}</Text>
+                                        <Text style={styles.dishPrice}>{d.price.toLocaleString("vi-VN")} đ</Text>
+                                    </View>
+                                    <View style={{flexDirection: 'row'}}>
+                                        <IconButton 
+                                            icon={isComparing ? "checkbox-marked-circle" : "compare"} 
+                                            mode="contained" 
+                                            containerColor={isComparing ? "#2196F3" : "#e0e0e0"} 
+                                            iconColor={isComparing ? "white" : "black"}
+                                            onPress={() => toggleCompare(d)}
+                                        />
+                                        <IconButton icon="cart-plus" mode="contained" containerColor="#ff9800" iconColor="white" onPress={() => quickAddToCart(d)} />
+                                    </View>
+                                </View>
+
+                                {/* 👇 HIỂN THỊ TAGS: Loại bỏ chiều cao cố định để hiện đầy đủ */}
+                                <View style={styles.tagContainer}>
+                                    {d.tags && d.tags.map((tag, index) => (
+                                        <Chip 
+                                            key={index} 
+                                            style={styles.tag} 
+                                            textStyle={styles.tagText}
+                                            icon="tag-outline"
+                                            compact={true}
+                                        >
+                                            {tag.name}
+                                        </Chip>
+                                    ))}
+                                </View>
+                            </Card.Content>
+                        </Card>
                     </TouchableOpacity>
-                ))}
-            </View>
-            
-            {loading && page > 1 && <ActivityIndicator size="large" color="blue" style={{ margin: 20 }} />}
+                );
+            })}
         </ScrollView>
     );
 };
 
 const styles = StyleSheet.create({
-    dishContainer: { flexDirection: 'row', padding: 10, marginHorizontal: 10, marginBottom: 10, backgroundColor: '#fff', borderRadius: 8, elevation: 2 },
-    dishImage: { width: 100, height: 100, borderRadius: 8 },
-    dishInfo: { marginLeft: 10, flex: 1, justifyContent: 'space-between' },
-    dateText: { fontSize: 12, color: "gray", fontStyle: "italic" },
-    priceText: { fontWeight: "bold", color: "#d32f2f", fontSize: 16, marginTop: 5 }
+    card: { margin: 10, marginBottom: 5, overflow: 'hidden', backgroundColor: 'white' },
+    rowBetween: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+    dishName: { fontSize: 18, fontWeight: 'bold' },
+    dishPrice: { fontSize: 16, fontWeight: 'bold', color: 'red' },
+    prepBadge: {
+        position: 'absolute',
+        top: 10,
+        right: 10,
+        backgroundColor: 'rgba(0,0,0,0.6)',
+        flexDirection: 'row',
+        alignItems: 'center',
+        borderRadius: 15,
+        paddingRight: 10
+    },
+    prepText: { color: 'white', fontSize: 12, fontWeight: 'bold' },
+    tagContainer: { 
+        flexDirection: 'row', 
+        flexWrap: 'wrap', 
+        marginTop: 10,
+        paddingBottom: 5 
+    },
+    tag: { 
+        marginRight: 6, 
+        marginBottom: 6, 
+        backgroundColor: '#e3f2fd', // Màu xanh nhạt cho tag chuyên nghiệp hơn
+        borderRadius: 8
+    },
+    tagText: { 
+        fontSize: 11, 
+        color: '#1976d2', 
+        fontWeight: 'bold',
+        marginVertical: 2 // Tạo không gian cho chữ
+    }
 });
 
 export default Dishes;

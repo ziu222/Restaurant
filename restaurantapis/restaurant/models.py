@@ -26,7 +26,7 @@ class BaseModel(models.Model):
     active = models.BooleanField(default=True)
     created_date = models.DateTimeField(auto_now_add=True)
     updated_date = models.DateTimeField(auto_now=True)
-    preparation_time = models.IntegerField(default=0)
+
     class Meta:
         abstract = True
 

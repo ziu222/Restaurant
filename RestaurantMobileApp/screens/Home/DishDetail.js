@@ -9,7 +9,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 import MyStyles from "../../styles/MyStyles";
 import Apis, { authApi, endpoints } from "../../utils/Apis";
-import { MyUserContext } from "../../utils/MyContexts"; 
+import { MyUserContext, MyCartContext } from "../../utils/MyContexts"; 
 
 // Thiết lập ngôn ngữ tiếng Việt cho thời gian
 moment.locale('vi');
@@ -19,14 +19,15 @@ const DishDetail = () => {
     const { dishId } = route.params;
     const { width } = useWindowDimensions();
     const navigation = useNavigation();
-
-    // Lấy thông tin user từ Context
+    
+    // Lấy thông tin user và dispatch của Giỏ hàng
     const [user, ] = useContext(MyUserContext);
+    const [, cartDispatch] = useContext(MyCartContext);
 
     const [dish, setDish] = useState(null);
     const [reviews, setReviews] = useState([]);
     const [content, setContent] = useState("");
-    const [rating, setRating] = useState(5); // Mặc định 5 sao (Number)
+    const [rating, setRating] = useState(5); 
     const [loading, setLoading] = useState(false);
 
     // --- 1. Load chi tiết món ăn ---
@@ -45,7 +46,6 @@ const DishDetail = () => {
     // --- 2. Load danh sách đánh giá ---
     const loadReviews = async () => {
         try {
-            // Dùng endpoint 'dish-reviews' (GET /dishes/{id}/reviews/)
             let res = await Apis.get(endpoints['dish-reviews'](dishId));
             setReviews(res.data);
         } catch (ex) {
@@ -57,7 +57,30 @@ const DishDetail = () => {
         loadReviews();
     }, [dishId]);
 
-    // --- 3. Xử lý Thêm mới hoặc Cập nhật (PATCH/POST) ---
+    // --- 3. Hàm Thêm vào giỏ hàng ---
+    const addToCart = () => {
+        // Kiểm tra biến user từ Context
+        if (!user) {
+            Alert.alert(
+                "Yêu cầu đăng nhập", 
+                "Vui lòng đăng nhập để thêm món vào giỏ hàng!",
+                [
+                    { text: "Hủy", style: "cancel" },
+                    { text: "Đăng nhập", onPress: () => navigation.navigate("Login") }
+                ]
+            );
+            return; // Dừng lại tại đây, không chạy lệnh thêm
+        }
+
+        // Nếu đã có user thì cho phép thêm
+        cartDispatch({
+            type: "add",
+            payload: dish 
+        });
+        Alert.alert("Thành công", "Đã thêm món vào giỏ hàng!");
+    }
+
+    // --- 4. Xử lý Thêm mới hoặc Cập nhật Review (PATCH/POST) ---
     const addReview = async () => {
         if (!content.trim()) {
             Alert.alert("Thông báo", "Vui lòng nhập nội dung đánh giá!");
@@ -104,7 +127,7 @@ const DishDetail = () => {
         }
     }
 
-    // --- 4. Xử lý Xóa đánh giá ---
+    // --- 5. Xử lý Xóa đánh giá ---
     const deleteReview = (reviewId) => {
         Alert.alert(
             "Xác nhận",
@@ -118,7 +141,6 @@ const DishDetail = () => {
                             const token = await AsyncStorage.getItem("token");
                             await authApi(token).delete(endpoints['delete-review'](reviewId));
                             loadReviews(); // Load lại sau khi xóa
-                            // Reset form nếu đang sửa cái bị xóa
                             setContent("");
                             setRating(5);
                         } catch (ex) {
@@ -131,11 +153,10 @@ const DishDetail = () => {
         );
     }
 
-    // --- 5. Đổ dữ liệu lên form để sửa ---
+    // --- 6. Đổ dữ liệu lên form để sửa ---
     const startEdit = (review) => {
         setContent(review.content);
         setRating(review.rating);
-        // Cuộn lên trên cùng (tuỳ chọn)
         Alert.alert("Chỉnh sửa", "Nội dung cũ đã được điền. Hãy thay đổi và bấm Gửi.");
     }
 
@@ -196,10 +217,8 @@ const DishDetail = () => {
                     {/* FORM NHẬP (Chỉ hiện khi đã Login) */}
                     {user ? (
                         <View style={styles.inputContainer}>
-                            {/* Chọn sao */}
                             <RatingBar currentRating={rating} onSelect={setRating} />
                             
-                            {/* Ô nhập text */}
                             <TextInput 
                                 mode="outlined" 
                                 label="Chia sẻ cảm nhận của bạn..." 
@@ -210,7 +229,6 @@ const DishDetail = () => {
                                 style={{ marginTop: 10, backgroundColor: 'white' }}
                             />
                             
-                            {/* Nút gửi */}
                             <Button 
                                 mode="contained" 
                                 onPress={addReview} 
@@ -241,12 +259,11 @@ const DishDetail = () => {
                                             <Text style={{ fontSize: 12, color: 'gray' }}>
                                                 {moment(r.created_date).fromNow()}
                                             </Text>
-                                            {/* Hiển thị sao nhỏ trong từng review */}
                                             <RatingBar currentRating={r.rating} readOnly={true} size={20} />
                                         </View>
                                     </View>
 
-                                    {/* Nút Sửa/Xóa (Chỉ hiện nếu là bài của mình) */}
+                                    {/* Nút Sửa/Xóa */}
                                     {user && user.id === r.user.id && (
                                         <View style={{ flexDirection: 'row' }}>
                                             <IconButton icon="pencil" size={20} iconColor="blue" onPress={() => startEdit(r)} />
@@ -266,6 +283,19 @@ const DishDetail = () => {
                     )}
                 </View>
             </ScrollView>
+
+            {/* --- NÚT ĐẶT HÀNG (CỐ ĐỊNH Ở ĐÁY) --- */}
+            <View style={{ padding: 15, borderTopWidth: 1, borderColor: '#ddd', backgroundColor: 'white' }}>
+                <Button 
+                    mode="contained" 
+                    icon="cart-plus" 
+                    onPress={addToCart}
+                    style={{ backgroundColor: "#ff9800", paddingVertical: 5 }}
+                    labelStyle={{ fontSize: 18 }}
+                >
+                    Thêm vào giỏ hàng
+                </Button>
+            </View>
         </View>
     );
 }
@@ -278,7 +308,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#fff',
         borderWidth: 1,
         borderColor: '#ddd',
-        // Hiệu ứng bóng đổ nhẹ
         elevation: 2,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },

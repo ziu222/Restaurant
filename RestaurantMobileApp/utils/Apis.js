@@ -11,9 +11,11 @@ export const endpoints = {
     'register': '/users/',
     'dish-details': (dishId) => `/dishes/${dishId}/`,
     'dish-reviews': (dishId) => `/dishes/${dishId}/reviews/`, 
-
+    'create-order': '/orders/',
     'delete-review': (reviewId) => `/reviews/${reviewId}/`,
-
+    'orders': '/orders/',
+    'order-history': '/orders/',
+    'tables': '/tables/',
 };
 
 export const authApi = (accessToken) => axios.create({

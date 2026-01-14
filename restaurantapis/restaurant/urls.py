@@ -10,6 +10,7 @@ r.register('reviews', views.ReviewView, basename='review')
 r.register('orders', views.OrderView, basename='order')
 r.register('stats', views.StatsView, basename='stats')
 r.register('tags', views.TagView, basename='tags')
+# r.register('tables', views.TableView, basename='tables')
 urlpatterns = [
     path('', include(r.urls)),
 

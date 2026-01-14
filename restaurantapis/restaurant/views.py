@@ -5,12 +5,85 @@ from django.db.models import Sum, F
 from django.utils.dateparse import parse_date
 
 from restaurant import serializers, paginators, perms
-from .models import Category, Dish, User, Review, Order, Like, OrderDetail, Tag
+from .models import Category, Dish, User, Review, Order, Like, OrderDetail, Tag, Table
+
 
 class CategoryView(viewsets.ViewSet, generics.ListAPIView):
     queryset = Category.objects.all()
     serializer_class = serializers.CategorySerializer
     permission_classes = [permissions.AllowAny]
+
+class TableView(viewsets.ViewSet, generics.ListCreateAPIView, generics.DestroyAPIView):
+    queryset = Table.objects.all()
+    serializer_class = serializers.TableSerializer
+
+    def get_permissions(self):
+        if self.request.method in ['POST', 'DELETE']:
+            return [permissions.IsAdminUser()]
+        return [permissions.AllowAny()]
+
+    def get_queryset(self):
+        return Table.objects.filter(active=True)
+
+class OrderView(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveAPIView):
+    serializer_class = serializers.OrderSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        if getattr(self, 'swagger_fake_view', False):
+            return Order.objects.none()
+
+        user = self.request.user
+        queryset = Order.objects.prefetch_related('details__dish').order_by('-created_date')
+
+        if user.role == User.Role.ADMIN:
+            return queryset.all()
+        if user.role == User.Role.CHEF:
+            return queryset.filter(details__dish__chef=user).distinct()
+
+        return queryset.filter(user=user)
+
+    @action(methods=['get', 'patch'], detail=True, url_path='update-order')
+    def update_order_info(self, request, pk=None):
+        order = self.get_object()
+
+        if order.status == 'COMPLETED':
+            return Response({"detail": "Đơn hàng đã hoàn tất, không thể chỉnh sửa."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if request.method.__eq__('PATCH'):
+
+            s = serializers.OrderSerializer(order, data=request.data, partial=True)
+            if s.is_valid():
+                s.save()
+                return Response(s.data, status=status.HTTP_200_OK)
+            return Response(s.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(serializers.OrderSerializer(order).data)
+
+    @action(methods=['post'], detail=True, url_path='pay')
+    def pay_order(self, request, pk=None):
+        order = self.get_object()
+
+        if order.status == 'COMPLETED':
+            return Response({"detail": "Đơn này đã thanh toán rồi."}, status=400)
+
+        order.status = 'COMPLETED'
+        order.payment_method = request.data.get('payment_method', 'CASH')
+        order.save()
+
+        return Response({"detail": "Thanh toán thành công, bàn đã trống!"}, status=status.HTTP_200_OK)
+
+    @action(methods=['post'], detail=True, url_path='cancel')
+    def cancel_order(self, request, pk=None):
+        order = self.get_object()
+
+        if order.status == 'PENDING':
+            order.status = 'CANCELLED'
+            order.save()
+            return Response({"detail": "Hủy đơn thành công."})
+
+        return Response({"detail": "Đơn hàng đã được xử lý, không thể hủy."}, status=400)
 
 
 class DishView(viewsets.ViewSet, generics.ListAPIView, generics.RetrieveAPIView):
@@ -159,101 +232,6 @@ class ReviewView(viewsets.ViewSet, generics.DestroyAPIView):
 class TagView(viewsets.ViewSet, generics.ListAPIView):
     queryset = Tag.objects.all()
     serializer_class = serializers.TagSerializer
-
-class OrderView(viewsets.ViewSet, generics.ListCreateAPIView, generics.RetrieveAPIView):
-    serializer_class = serializers.OrderSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        if getattr(self, 'swagger_fake_view', False):
-            return Order.objects.none()
-
-        user = self.request.user
-
-        if not user.is_authenticated:
-            return Order.objects.none()
-
-        if user.role == User.Role.CHEF:
-            return Order.objects.filter(details__dish__chef=user).distinct().order_by('-created_date')
-
-        if user.role == User.Role.ADMIN:
-            return Order.objects.all().order_by('-created_date')
-
-        return Order.objects.filter(user=user).order_by('-created_date')
-
-    def partial_update(self, request, pk=None):
-        """
-        Hàm này sẽ hứng request PATCH /orders/{id}/
-        Dùng để cập nhật một vài trường thông tin (không bắt buộc gửi hết).
-        """
-        try:
-            # Lấy object dựa trên pk và check permission (IsOwner)
-            order = self.get_object()
-
-            # Kiểm tra logic nghiệp vụ (Ví dụ: Đã xong thì không cho sửa nữa)
-            if order.status == 'COMPLETED':
-                return Response({"detail": "Đơn hàng đã hoàn thành, không thể chỉnh sửa."},
-                                status=status.HTTP_400_BAD_REQUEST)
-
-            # Khởi tạo serializer với partial=True (QUAN TRỌNG ĐỂ LÀM PATCH)
-            serializer = serializers.OrderSerializer(order, data=request.data, partial=True)
-
-            if serializer.is_valid():
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_200_OK)
-
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        except Order.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-    @action(methods=['post'], detail=True, url_path='cancel')
-    def cancel_order(self, request, pk=None):
-        try:
-            order = self.get_object()
-
-            if order.status == 'PENDING':
-                order.status = 'CANCELLED'
-                order.save()
-                return Response({"detail": "Hủy đơn hàng thành công."}, status=status.HTTP_200_OK)
-
-            return Response(
-                {"detail": "Đơn hàng đã được quán nhận, không thể hủy. Vui lòng liên hệ nhà hàng."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        except Order.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
-    @action(methods=['post'], detail=True, url_path='checkout')
-    def checkout(self, request, pk):
-        try:
-            order = self.get_object()
-
-            # 1. Kiểm tra: Chỉ đơn chưa hoàn thành mới được thanh toán
-            if order.status == 'COMPLETED':
-                return Response({"detail": "Đơn hàng này đã thanh toán rồi."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # 2. Lấy phương thức thanh toán từ Client gửi lên
-            confirm_method = request.data.get('payment_method')
-
-            # Kiểm tra xem phương thức có hợp lệ không (Trừ UNKNOWN ra)
-            valid_methods = ['CASH', 'PAYPAL', 'MOMO', 'ZALO']
-            if confirm_method not in valid_methods:
-                return Response(
-                    {"detail": "Vui lòng chọn phương thức thanh toán hợp lệ (CASH, MOMO, ZALO...)"},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            # 3. Cập nhật dữ liệu
-            order.payment_method = confirm_method
-            order.status = 'COMPLETED'
-            order.save()
-
-            return Response(serializers.OrderSerializer(order).data, status=status.HTTP_200_OK)
-
-        except Order.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-
 
 class StatsView(viewsets.ViewSet):
     @action(methods=['get'], detail=False, url_path='revenue')
